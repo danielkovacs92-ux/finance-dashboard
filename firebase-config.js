@@ -13,6 +13,9 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 
+// Initialize Firestore - this will be available in all pages
+const db = firebase.firestore();
+
 // Security check - prevent local file access
 if (window.location.protocol === "file:") {
   document.body.innerHTML = `
