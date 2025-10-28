@@ -1,0 +1,2138 @@
+<!DOCTYPE html>
+<!-- saved from url=(0067)file:///C:/Users/danie/Downloads/updated_dashboard_page%20(29).html -->
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Finance Dashboard - Daniel</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <link href="./Dashboard_files/css2" rel="stylesheet" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        min-height: 100vh;
+        color: #f1f5f9;
+        overflow-x: hidden;
+        transition: background 0.4s ease, color 0.4s ease;
+      }
+
+      /* Light mode */
+      body.light-mode {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        color: #1e293b;
+      }
+
+      /* Subtle animated background */
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: linear-gradient(
+            rgba(100, 181, 246, 0.03) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(100, 181, 246, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        animation: gridMove 30s linear infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      body.light-mode::before {
+        background-image: linear-gradient(
+            rgba(59, 130, 246, 0.08) 1px,
+            transparent 1px
+          ),
+          linear-gradient(90deg, rgba(59, 130, 246, 0.08) 1px, transparent 1px);
+      }
+
+      @keyframes gridMove {
+        0% {
+          transform: translate(0, 0);
+        }
+        100% {
+          transform: translate(50px, 50px);
+        }
+      }
+
+      /* Sidebar toggle button */
+      .sidebar-toggle {
+        position: fixed;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 80px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        border-radius: 0 10px 10px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1001;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        transition: all 0.3s ease;
+      }
+
+      .sidebar-toggle:hover {
+        width: 45px;
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+      }
+
+      .sidebar-toggle::before {
+        content: "▶";
+        color: #fff;
+        font-size: 16px;
+        transition: transform 0.3s ease;
+      }
+
+      .sidebar-toggle.active::before {
+        transform: rotate(180deg);
+      }
+
+      /* Collapsible sidebar */
+      .sidebar {
+        position: fixed;
+        left: -280px;
+        top: 0;
+        width: 280px;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(59, 130, 246, 0.2);
+        padding: 60px 0 20px 0;
+        z-index: 1000;
+        transition: left 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        box-shadow: 5px 0 30px rgba(0, 0, 0, 0.5);
+      }
+
+      .sidebar.active {
+        left: 0;
+      }
+
+      .sidebar-item {
+        padding: 18px 30px;
+        color: #cbd5e1;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        font-weight: 500;
+        font-size: 15px;
+      }
+
+      .sidebar-item::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 3px;
+        height: 100%;
+        background: linear-gradient(180deg, #3b82f6, #2563eb);
+        transform: scaleY(0);
+        transition: transform 0.3s ease;
+      }
+
+      .sidebar-item:hover,
+      .sidebar-item.active {
+        background: rgba(59, 130, 246, 0.1);
+        padding-left: 40px;
+        color: #ffffff;
+      }
+
+      .sidebar-item:hover::before,
+      .sidebar-item.active::before {
+        transform: scaleY(1);
+      }
+
+      /* Main dashboard container */
+      .dashboard-container {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        padding: 40px;
+        z-index: 1;
+      }
+
+      /* Header */
+      .header {
+        margin-bottom: 40px;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+
+      .header > div:first-child {
+        flex: 1;
+      }
+
+      .header h1 {
+        font-size: 42px;
+        font-weight: 300;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+      }
+
+      body.light-mode .header h1 {
+        color: #0f172a;
+      }
+
+      .header h1:first-child {
+        font-size: 18px;
+        color: #94a3b8;
+        margin-bottom: 8px;
+        font-weight: 400;
+      }
+
+      body.light-mode .header h1:first-child {
+        color: #64748b;
+      }
+
+      /* Theme Toggle */
+      .theme-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+      }
+
+      body.light-mode .theme-toggle {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.4);
+      }
+
+      .theme-toggle:hover {
+        background: rgba(59, 130, 246, 0.2);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+      }
+
+      .toggle-icon {
+        font-size: 20px;
+        transition: transform 0.3s ease;
+      }
+
+      .theme-toggle:hover .toggle-icon {
+        transform: scale(1.1);
+      }
+
+      .toggle-text {
+        font-size: 14px;
+        font-weight: 500;
+        color: #cbd5e1;
+      }
+
+      body.light-mode .toggle-text {
+        color: #475569;
+      }
+
+      /* Reset Button */
+      .reset-btn {
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        border: none;
+        border-radius: 25px;
+        color: white;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        font-family: "Inter", sans-serif;
+      }
+
+      .reset-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+      }
+
+      /* Dashboard grid */
+      .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+        max-width: 1800px;
+        margin: 0 auto;
+      }
+
+      /* Card styling */
+      .card {
+        background: rgba(30, 41, 59, 0.6);
+        backdrop-filter: blur(10px);
+        padding: 30px;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+      }
+
+      body.light-mode .card {
+        background: rgba(255, 255, 255, 0.9);
+        border-color: rgba(148, 163, 184, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+      }
+
+      .card::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+        transition: left 0.6s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 48px rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.3);
+      }
+
+      body.light-mode .card:hover {
+        box-shadow: 0 12px 48px rgba(59, 130, 246, 0.2);
+      }
+
+      .card:hover::after {
+        left: 100%;
+      }
+
+      .card h2 {
+        font-size: 16px;
+        color: #94a3b8;
+        margin-bottom: 24px;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+      }
+
+      body.light-mode .card h2 {
+        color: #64748b;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 350px;
+      }
+
+      .column-chart-container {
+        position: relative;
+        height: 400px;
+      }
+
+      /* Goal section */
+      .goal-section {
+        grid-column: 1 / -1;
+      }
+
+      .goal-content {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+        flex-wrap: wrap;
+      }
+
+      .goal-title {
+        font-size: 16px;
+        margin-bottom: 30px;
+        color: #94a3b8;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      body.light-mode .goal-title {
+        color: #64748b;
+      }
+
+      .goal-selector {
+        padding: 10px 18px;
+        font-size: 15px;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        color: #ffffff;
+        font-family: "Inter", sans-serif;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-left: 15px;
+      }
+
+      body.light-mode .goal-selector {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.4);
+        color: #0f172a;
+      }
+
+      .goal-selector:hover {
+        background: rgba(59, 130, 246, 0.2);
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+      }
+
+      .goal-selector option {
+        background: #1e293b;
+        color: #ffffff;
+      }
+
+      body.light-mode .goal-selector option {
+        background: #ffffff;
+        color: #0f172a;
+      }
+
+      .goal-progress {
+        flex: 1;
+        min-width: 300px;
+      }
+
+      /* Progress bar */
+      .progress-bar-container {
+        width: 100%;
+        height: 36px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 18px;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid rgba(148, 163, 184, 0.1);
+        box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ef4444, #f97316);
+        transition: width 0.5s ease;
+        position: relative;
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.6);
+      }
+
+      .progress-text,
+      .progress-max {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-weight: 600;
+        font-size: 14px;
+        z-index: 2;
+      }
+
+      .progress-text {
+        left: 15px;
+        color: #ffffff;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+
+      .progress-max {
+        right: 15px;
+        color: #cbd5e1;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      }
+
+      /* Slider */
+      .savings-slider {
+        width: 100%;
+        margin-top: 25px;
+      }
+
+      .savings-slider label {
+        color: #94a3b8;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      body.light-mode .savings-slider label {
+        color: #64748b;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: rgba(59, 130, 246, 0.2);
+        outline: none;
+        margin-top: 15px;
+        -webkit-appearance: none;
+      }
+
+      body.light-mode input[type="range"] {
+        background: rgba(59, 130, 246, 0.25);
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        transition: all 0.3s;
+      }
+
+      input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.7);
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        border: none;
+      }
+
+      #sliderValue {
+        margin-top: 12px;
+        color: #3b82f6;
+        font-weight: 600;
+        font-size: 16px;
+      }
+
+      .goal-date {
+        margin-top: 20px;
+        font-size: 15px;
+        color: #cbd5e1;
+        font-weight: 500;
+      }
+
+      body.light-mode .goal-date {
+        color: #475569;
+      }
+
+      .goal-date strong {
+        color: #3b82f6;
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .target-date-success {
+        color: #10b981 !important;
+      }
+
+      .target-date-warning {
+        color: #ef4444 !important;
+      }
+
+      .comparison-message-success {
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.1);
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        display: inline-block;
+      }
+
+      .comparison-message-warning {
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        display: inline-block;
+      }
+
+      body.light-mode .comparison-message-success {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.4);
+      }
+
+      body.light-mode .comparison-message-warning {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.4);
+      }
+
+      #userTargetDate {
+        transition: all 0.2s ease;
+        padding: 4px 8px;
+        border-radius: 4px;
+      }
+
+      #userTargetDate:hover {
+        text-decoration: underline;
+        opacity: 0.8;
+        background: rgba(59, 130, 246, 0.1);
+      }
+
+      body.light-mode #userTargetDate:hover {
+        background: rgba(59, 130, 246, 0.15);
+      }
+
+      .edit-date-btn {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+        font-family: "Inter", sans-serif;
+      }
+
+      .edit-date-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(59, 130, 246, 0.4);
+      }
+
+      .save-date-btn {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+        font-family: "Inter", sans-serif;
+      }
+
+      .save-date-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(16, 185, 129, 0.4);
+      }
+
+      .cancel-date-btn {
+        background: linear-gradient(135deg, #6b7280, #4b5563);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 2px 6px rgba(107, 114, 128, 0.3);
+        font-family: "Inter", sans-serif;
+      }
+
+      .cancel-date-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(107, 114, 128, 0.4);
+      }
+
+      #userTargetDateInput {
+        transition: all 0.3s;
+      }
+
+      #userTargetDateInput:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      body.light-mode #userTargetDateInput {
+        background: #ffffff;
+        color: #1e293b;
+        border-color: rgba(59, 130, 246, 0.4);
+      }
+
+      @media (max-width: 1200px) {
+        .dashboard-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 36px;
+        }
+
+        .dashboard-container {
+          padding: 30px 20px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 250px;
+          left: -250px;
+        }
+
+        .goal-content {
+          flex-direction: column;
+        }
+
+        .header h1 {
+          font-size: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Authentication Modal -->
+    <div
+      id="authModal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: #1e293b;
+          padding: 40px;
+          border-radius: 16px;
+          max-width: 400px;
+          width: 90%;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        "
+      >
+        <h2
+          id="authTitle"
+          style="color: #fff; margin-bottom: 20px; font-size: 24px"
+        >
+          Sign In
+        </h2>
+
+        <div
+          id="authError"
+          style="
+            display: none;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+          "
+        ></div>
+
+        <form id="authForm">
+          <div style="margin-bottom: 20px">
+            <label
+              style="
+                display: block;
+                color: #cbd5e1;
+                margin-bottom: 8px;
+                font-size: 14px;
+              "
+              >Email</label
+            >
+            <input
+              type="email"
+              id="authEmail"
+              required
+              style="
+                width: 100%;
+                padding: 12px;
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 8px;
+                background: rgba(15, 23, 42, 0.4);
+                color: #f1f5f9;
+                font-size: 14px;
+              "
+            />
+          </div>
+
+          <div style="margin-bottom: 20px">
+            <label
+              style="
+                display: block;
+                color: #cbd5e1;
+                margin-bottom: 8px;
+                font-size: 14px;
+              "
+              >Password</label
+            >
+            <input
+              type="password"
+              id="authPassword"
+              required
+              style="
+                width: 100%;
+                padding: 12px;
+                border: 1px solid rgba(148, 163, 184, 0.3);
+                border-radius: 8px;
+                background: rgba(15, 23, 42, 0.4);
+                color: #f1f5f9;
+                font-size: 14px;
+              "
+            />
+          </div>
+
+          <button
+            type="submit"
+            id="authSubmitBtn"
+            style="
+              width: 100%;
+              padding: 14px;
+              background: linear-gradient(135deg, #3b82f6, #2563eb);
+              color: white;
+              border: none;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+              margin-bottom: 15px;
+            "
+          >
+            Sign In
+          </button>
+        </form>
+
+        <div style="text-align: center">
+          <button
+            id="authToggleBtn"
+            style="
+              background: none;
+              border: none;
+              color: #3b82f6;
+              cursor: pointer;
+              font-size: 14px;
+              text-decoration: underline;
+            "
+          >
+            Don't have an account? Sign Up
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Sidebar toggle button -->
+    <div class="sidebar-toggle" id="sidebarToggle"></div>
+
+    <!-- Collapsible sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-item" data-page="expenses">Expenses</div>
+      <div class="sidebar-item" data-page="income">Income</div>
+      <div class="sidebar-item" data-page="goals">Goals</div>
+      <div class="sidebar-item active" data-page="dashboard">Dashboard</div>
+    </div>
+
+    <div class="dashboard-container">
+      <div class="header">
+        <div>
+          <h1
+            style="
+              font-size: 18px;
+              color: #94a3b8;
+              margin-bottom: 8px;
+              font-weight: 400;
+            "
+          >
+            Welcome,
+          </h1>
+          <h1 id="userName">User</h1>
+        </div>
+
+        <!-- Theme Toggle and Reset Button -->
+        <div style="display: flex; gap: 15px; align-items: center">
+          <button class="reset-btn" id="resetBtn">Reset Data</button>
+          <button
+            class="reset-btn"
+            id="signOutBtn"
+            style="background: linear-gradient(135deg, #6b7280, #4b5563)"
+          >
+            Sign Out
+          </button>
+
+          <div class="theme-toggle" id="themeToggle">
+            <span class="toggle-icon">☀️</span>
+            <span class="toggle-text">Light Mode</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h2>Your Current Expenses</h2>
+          <div class="chart-container">
+            <canvas
+              id="expensesBarChart"
+              width="823"
+              height="350"
+              style="
+                display: block;
+                box-sizing: border-box;
+                height: 350px;
+                width: 823px;
+              "
+            ></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Expense Distribution</h2>
+          <div class="chart-container">
+            <canvas
+              id="expensesPieChart"
+              width="823"
+              height="350"
+              style="
+                display: block;
+                box-sizing: border-box;
+                height: 350px;
+                width: 823px;
+              "
+            ></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Your Income &amp; Savings</h2>
+          <div class="column-chart-container">
+            <canvas
+              id="incomeChart"
+              width="823"
+              height="400"
+              style="
+                display: block;
+                box-sizing: border-box;
+                height: 400px;
+                width: 823px;
+              "
+            ></canvas>
+          </div>
+        </div>
+
+        <div class="card goal-section">
+          <h2 class="goal-title">
+            Current Goal:
+            <select id="goalSelector" class="goal-selector">
+              <option value="0">Pay off Mortgage</option>
+              <option value="1">Holiday</option>
+            </select>
+          </h2>
+          <div class="goal-content">
+            <div class="goal-progress">
+              <div class="progress-bar-container">
+                <div
+                  class="progress-bar-fill"
+                  id="progressBar"
+                  style="width: 51.7%"
+                ></div>
+                <div class="progress-text" id="progressText">$28,435</div>
+                <div class="progress-max" id="progressMax">$55,000</div>
+              </div>
+
+              <div class="savings-slider">
+                <label for="savingsSlider"
+                  >Adjust Weekly Savings Contribution:</label
+                >
+                <input
+                  type="range"
+                  id="savingsSlider"
+                  min="0"
+                  max="maxWeeklySavings"
+                  value="0"
+                  step="1"
+                />
+                <div id="sliderValue">$1,324 per week</div>
+              </div>
+
+              <div class="goal-date">
+                Goal achievement date:
+                <strong id="goalDate">Not calculated</strong>
+              </div>
+
+              <div
+                class="goal-date"
+                style="
+                  margin-top: 15px;
+                  display: flex;
+                  align-items: center;
+                  flex-wrap: wrap;
+                  gap: 10px;
+                "
+              >
+                <span>Your target date:</span>
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <strong
+                    id="userTargetDate"
+                    style="color: #94a3b8; cursor: pointer; position: relative"
+                    >Not set</strong
+                  >
+                  <input
+                    type="date"
+                    id="userTargetDateInput"
+                    style="
+                      display: none;
+                      padding: 6px 10px;
+                      border: 1px solid rgba(59, 130, 246, 0.3);
+                      border-radius: 6px;
+                      background: rgba(15, 23, 42, 0.4);
+                      color: #f1f5f9;
+                      font-family: 'Inter', sans-serif;
+                      font-size: 14px;
+                    "
+                  />
+                  <button
+                    id="editTargetDateBtn"
+                    class="edit-date-btn"
+                    title="Edit target date"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    id="saveTargetDateBtn"
+                    class="save-date-btn"
+                    style="display: none"
+                  >
+                    Save
+                  </button>
+                  <button
+                    id="cancelTargetDateBtn"
+                    class="cancel-date-btn"
+                    style="display: none"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <span
+                  id="dateComparisonMessage"
+                  style="font-size: 14px; font-weight: 500"
+                ></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const db = firebase.firestore();
+      // Auto sign-out after 24 hours of inactivity
+      let inactivityTimeout;
+      const INACTIVITY_LIMIT = 24 * 60 * 60 * 1000; // 24 hours
+
+      function resetInactivityTimer() {
+        clearTimeout(inactivityTimeout);
+        inactivityTimeout = setTimeout(() => {
+          firebase.auth().signOut();
+          alert(
+            "Your session has expired due to inactivity. Please sign in again."
+          );
+          window.location.reload();
+        }, INACTIVITY_LIMIT);
+      }
+
+      // Track user activity
+      ["mousedown", "keydown", "scroll", "touchstart"].forEach((event) => {
+        document.addEventListener(event, resetInactivityTimer, true);
+      });
+
+      // Start timer
+      resetInactivityTimer();
+      // Load user data from Firebase
+      async function loadUserData(userId) {
+        try {
+          const userDoc = await db.collection("users").doc(userId).get();
+
+          if (userDoc.exists) {
+            const data = userDoc.data();
+            expenses = data.expenses || [];
+            income = data.income || [];
+            goals = data.goals || [];
+
+            // Also load username if saved
+            if (data.userName) {
+              localStorage.setItem("financeUserName", data.userName);
+            }
+
+            console.log("✓ Data loaded from Firebase");
+            return true;
+          } else {
+            console.log("No data found - will use defaults");
+            return false;
+          }
+        } catch (error) {
+          console.error("Error loading data:", error);
+          alert("Error loading data from database. Using local data.");
+          return false;
+        }
+      }
+
+      // Save user data to Firebase
+      async function saveUserData(userId, dataType = "all") {
+        if (!userId) {
+          console.error("No user ID - cannot save");
+          return false;
+        }
+
+        try {
+          const dataToSave = {
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+          };
+
+          // Save specific data type or all
+          if (dataType === "all" || dataType === "expenses") {
+            dataToSave.expenses = expenses;
+          }
+          if (dataType === "all" || dataType === "income") {
+            dataToSave.income = income;
+          }
+          if (dataType === "all" || dataType === "goals") {
+            dataToSave.goals = goals;
+          }
+          if (dataType === "all" || dataType === "userName") {
+            dataToSave.userName =
+              localStorage.getItem("financeUserName") || "User";
+          }
+
+          await db
+            .collection("users")
+            .doc(userId)
+            .set(dataToSave, { merge: true });
+
+          console.log("✓ Data saved to Firebase");
+          return true;
+        } catch (error) {
+          console.error("Error saving data:", error);
+          alert("Error saving data to database");
+          return false;
+        }
+      }
+
+      // Authentication - checks if user has email stored
+      // New authentication system with Firebase Auth
+      let isSignUpMode = false;
+
+      function showAuthModal() {
+        document.getElementById("authModal").style.display = "flex";
+      }
+
+      function hideAuthModal() {
+        document.getElementById("authModal").style.display = "none";
+      }
+
+      function showAuthError(message) {
+        const errorDiv = document.getElementById("authError");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+      }
+
+      function hideAuthError() {
+        document.getElementById("authError").style.display = "none";
+      }
+
+      // Toggle between sign in and sign up
+      document.addEventListener("DOMContentLoaded", function () {
+        document
+          .getElementById("authToggleBtn")
+          .addEventListener("click", function () {
+            isSignUpMode = !isSignUpMode;
+
+            if (isSignUpMode) {
+              document.getElementById("authTitle").textContent =
+                "Create Account";
+              document.getElementById("authSubmitBtn").textContent = "Sign Up";
+              document.getElementById("authToggleBtn").textContent =
+                "Already have an account? Sign In";
+            } else {
+              document.getElementById("authTitle").textContent = "Sign In";
+              document.getElementById("authSubmitBtn").textContent = "Sign In";
+              document.getElementById("authToggleBtn").textContent =
+                "Don't have an account? Sign Up";
+            }
+
+            hideAuthError();
+          });
+
+        // Handle form submission
+        document
+          .getElementById("authForm")
+          .addEventListener("submit", async function (e) {
+            e.preventDefault();
+            hideAuthError();
+
+            const email = document.getElementById("authEmail").value;
+            const password = document.getElementById("authPassword").value;
+
+            try {
+              if (isSignUpMode) {
+                // Create new account
+                const userCredential = await firebase
+                  .auth()
+                  .createUserWithEmailAndPassword(email, password);
+                currentUserId = userCredential.user.uid;
+
+                // Create initial user document
+                await db.collection("users").doc(currentUserId).set({
+                  email: email,
+                  createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                  expenses: [],
+                  income: [],
+                  goals: [],
+                });
+
+                hideAuthModal();
+                // Redirect new users to expenses page to start setup
+                window.location.href = "inputs.expenses.html";
+              } else {
+                // Sign in existing user
+                const userCredential = await firebase
+                  .auth()
+                  .signInWithEmailAndPassword(email, password);
+                currentUserId = userCredential.user.uid;
+
+                hideAuthModal();
+                // Existing users stay on dashboard and load their data
+                await initializeDashboard();
+              }
+            } catch (error) {
+              console.error("Auth error:", error);
+
+              // Show user-friendly error messages
+              switch (error.code) {
+                case "auth/email-already-in-use":
+                  showAuthError(
+                    "This email is already registered. Please sign in."
+                  );
+                  break;
+                case "auth/weak-password":
+                  showAuthError("Password should be at least 6 characters.");
+                  break;
+                case "auth/user-not-found":
+                  showAuthError("No account found with this email.");
+                  break;
+                case "auth/wrong-password":
+                  showAuthError("Incorrect password.");
+                  break;
+                case "auth/invalid-email":
+                  showAuthError("Invalid email address.");
+                  break;
+                default:
+                  showAuthError("Authentication failed. Please try again.");
+              }
+            }
+          });
+      });
+
+      // Check if user is already logged in
+      async function checkAuthState() {
+        return new Promise((resolve) => {
+          firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+              currentUserId = user.uid;
+              resolve(user.uid);
+            } else {
+              resolve(null);
+            }
+          });
+        });
+      }
+
+      // Initialize dashboard after authentication
+      async function initializeDashboard() {
+        // Load data from Firebase
+        const dataLoaded = await loadUserData(currentUserId);
+
+        // Use defaults if no data found
+        if (!dataLoaded) {
+          expenses = [...defaultExpenses];
+          income = [...defaultIncome];
+          goals = [...defaultGoals];
+        }
+
+        // Load username
+        const userName = localStorage.getItem("financeUserName") || "User";
+        document.getElementById("userName").textContent = userName;
+
+        // Validate goals
+        if (!goals || goals.length === 0) {
+          goals = [...defaultGoals];
+        }
+
+        currentGoalIndex = 0;
+
+        // Setup UI
+        populateGoalSelector();
+
+        // Event listeners (only add once)
+        if (!window.dashboardInitialized) {
+          document
+            .getElementById("goalSelector")
+            .addEventListener("change", function () {
+              if (typeof isEditingDate !== "undefined" && isEditingDate) {
+                exitEditMode(false);
+              }
+              currentGoalIndex = parseInt(this.value);
+              updateGoalDisplay();
+            });
+
+          document
+            .getElementById("savingsSlider")
+            .addEventListener("input", function () {
+              const weeklySavings = parseFloat(this.value);
+              const goal = goals[currentGoalIndex];
+
+              // Update slider display
+              document.getElementById("sliderValue").textContent =
+                "$" + Math.round(weeklySavings).toLocaleString() + " per week";
+
+              // Calculate goal achievement date
+              const goalDate = calculateGoalDate(
+                goal.current,
+                goal.target,
+                weeklySavings
+              );
+              document.getElementById("goalDate").textContent = goalDate;
+
+              // Update date comparison
+              const userTargetDateElement =
+                document.getElementById("userTargetDate");
+              const dateComparisonMessageElement = document.getElementById(
+                "dateComparisonMessage"
+              );
+
+              if (goal.targetDate && goal.targetDate !== "") {
+                const comparison = compareTargetDates(
+                  goalDate,
+                  goal.targetDate
+                );
+
+                if (comparison.isValid) {
+                  if (comparison.meetsTarget) {
+                    userTargetDateElement.className = "target-date-success";
+                    dateComparisonMessageElement.className =
+                      "comparison-message-success";
+                  } else {
+                    userTargetDateElement.className = "target-date-warning";
+                    dateComparisonMessageElement.className =
+                      "comparison-message-warning";
+                  }
+                  dateComparisonMessageElement.textContent = comparison.message;
+                }
+              }
+            });
+
+          window.dashboardInitialized = true;
+        }
+
+        // Create charts
+        createExpensesBarChart();
+        createExpensesPieChart();
+        createIncomeChart();
+        updateGoalDisplay();
+
+        console.log("✓ Dashboard initialized for user:", currentUserId);
+      }
+      // Global user ID variable
+      let currentUserId = null;
+      // Sidebar toggle functionality
+      const sidebarToggle = document.getElementById("sidebarToggle");
+      const sidebar = document.getElementById("sidebar");
+      const themeToggle = document.getElementById("themeToggle");
+      const resetBtn = document.getElementById("resetBtn");
+      const downloadBtn = document.getElementById("downloadBtn");
+
+      sidebarToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        sidebarToggle.classList.toggle("active");
+      });
+
+      // Reset button functionality
+      resetBtn.addEventListener("click", async () => {
+        if (
+          confirm(
+            "Are you sure you want to reset all data? This will delete everything from the database."
+          )
+        ) {
+          // Clear localStorage
+          localStorage.removeItem("financeExpenses");
+          localStorage.removeItem("financeIncome");
+          localStorage.removeItem("financeGoals");
+          localStorage.removeItem("financeUserName");
+
+          // Delete from Firebase
+          if (currentUserId) {
+            try {
+              await db.collection("users").doc(currentUserId).delete();
+              console.log("✓ Data deleted from Firebase");
+            } catch (error) {
+              console.error("Error deleting data:", error);
+            }
+          }
+
+          window.location.href = "inputs.expenses.html";
+        }
+      });
+      // Sign out functionality
+      document
+        .getElementById("signOutBtn")
+        .addEventListener("click", async () => {
+          if (confirm("Are you sure you want to sign out?")) {
+            try {
+              await firebase.auth().signOut();
+              currentUserId = null;
+              localStorage.clear();
+              window.location.reload();
+            } catch (error) {
+              console.error("Sign out error:", error);
+              alert("Error signing out");
+            }
+          }
+        });
+      // Theme toggle functionality
+      themeToggle.addEventListener("click", () => {
+        document.body.classList.toggle("light-mode");
+        const isLight = document.body.classList.contains("light-mode");
+
+        // Update toggle text and icon
+        const icon = themeToggle.querySelector(".toggle-icon");
+        const text = themeToggle.querySelector(".toggle-text");
+
+        if (isLight) {
+          icon.textContent = "🌙";
+          text.textContent = "Dark Mode";
+        } else {
+          icon.textContent = "☀️";
+          text.textContent = "Light Mode";
+        }
+
+        // Save preference to localStorage
+        localStorage.setItem("theme", isLight ? "light" : "dark");
+      });
+
+      // Load saved theme preference
+      window.addEventListener("DOMContentLoaded", () => {
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "light") {
+          document.body.classList.add("light-mode");
+          const icon = themeToggle.querySelector(".toggle-icon");
+          const text = themeToggle.querySelector(".toggle-text");
+          icon.textContent = "🌙";
+          text.textContent = "Dark Mode";
+        }
+      });
+
+      // Close sidebar when clicking outside
+      document.addEventListener("click", (e) => {
+        if (
+          !sidebar.contains(e.target) &&
+          !sidebarToggle.contains(e.target) &&
+          sidebar.classList.contains("active")
+        ) {
+          sidebar.classList.remove("active");
+          sidebarToggle.classList.remove("active");
+        }
+      });
+
+      // Initialize empty - will load from Firebase
+      let expenses = [];
+      let income = [];
+      let goals = [];
+
+      // Default data (used if no Firebase data exists)
+      const defaultExpenses = [
+        { name: "Rent", amount: 400, frequency: "Weekly" },
+        { name: "Electricity/ Gas", amount: 400, frequency: "Quarterly" },
+        { name: "Internet", amount: 60, frequency: "Monthly" },
+        { name: "Phone", amount: 30, frequency: "Monthly" },
+        { name: "Food", amount: 150, frequency: "Weekly" },
+        { name: "Transport", amount: 20, frequency: "Weekly" },
+        { name: "Health insurance", amount: 500, frequency: "Quarterly" },
+        { name: "Gym", amount: 800, frequency: "Annually" },
+      ];
+
+      const defaultIncome = [
+        { source: "Work", amount: 2000, frequency: "Weekly" },
+      ];
+
+      const defaultGoals = [
+        {
+          name: "Pay off Mortgage",
+          target: 150000,
+          current: 40000,
+          targetDate: "31 December 2030",
+        },
+        {
+          name: "Holiday",
+          target: 55000,
+          current: 28435,
+          targetDate: "21 June 2026",
+        },
+      ];
+
+      function convertToWeekly(amount, frequency) {
+        switch (frequency.toLowerCase()) {
+          case "weekly":
+            return amount;
+          case "monthly":
+            return (amount * 12) / 52;
+          case "quarterly":
+            return (amount * 4) / 52;
+          case "annually":
+            return amount / 52;
+          default:
+            return amount;
+        }
+      }
+
+      function calculateTotalWeeklyExpenses() {
+        return expenses.reduce((total, expense) => {
+          return total + convertToWeekly(expense.amount, expense.frequency);
+        }, 0);
+      }
+
+      function calculateTotalWeeklyIncome() {
+        return income.reduce((total, inc) => {
+          return total + convertToWeekly(inc.amount, inc.frequency);
+        }, 0);
+      }
+
+      function calculateWeeklySavings() {
+        return calculateTotalWeeklyIncome() - calculateTotalWeeklyExpenses();
+      }
+
+      function calculateGoalDate(currentSavings, targetAmount, weeklySavings) {
+        if (weeklySavings <= 0) {
+          return "Unable to reach goal with current savings rate";
+        }
+
+        const remainingAmount = targetAmount - currentSavings;
+        if (remainingAmount <= 0) {
+          return "Goal already achieved!";
+        }
+
+        const weeksNeeded = Math.ceil(remainingAmount / weeklySavings);
+        const today = new Date();
+        const goalDate = new Date(
+          today.getTime() + weeksNeeded * 7 * 24 * 60 * 60 * 1000
+        );
+
+        const day = goalDate.getDate();
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+        const month = monthNames[goalDate.getMonth()];
+        const year = goalDate.getFullYear();
+
+        return `${day} ${month} ${year}`;
+      }
+
+      function parseDateString(dateString) {
+        // Parse date string in format "DD Month YYYY"
+        if (!dateString || dateString === "") return null;
+
+        const parts = dateString.split(" ");
+        if (parts.length !== 3) return null;
+
+        const day = parseInt(parts[0]);
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+        const month = monthNames.indexOf(parts[1]);
+        const year = parseInt(parts[2]);
+
+        if (month === -1) return null;
+
+        return new Date(year, month, day);
+      }
+
+      function formatDateToString(date) {
+        const day = date.getDate();
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+        const month = monthNames[date.getMonth()];
+        const year = date.getFullYear();
+        return `${day} ${month} ${year}`;
+      }
+
+      function dateToInputFormat(dateString) {
+        // Convert "DD Month YYYY" to "YYYY-MM-DD" for date input
+        const date = parseDateString(dateString);
+        if (!date) return "";
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      function inputFormatToDateString(inputValue) {
+        // Convert "YYYY-MM-DD" to "DD Month YYYY"
+        if (!inputValue) return "";
+
+        const date = new Date(inputValue + "T00:00:00");
+        return formatDateToString(date);
+      }
+
+      function compareTargetDates(calculatedDateString, userTargetDateString) {
+        const calculatedDate = parseDateString(calculatedDateString);
+        const userTargetDate = parseDateString(userTargetDateString);
+
+        if (!userTargetDate) {
+          return {
+            isValid: false,
+            message: "",
+            meetsTarget: null,
+          };
+        }
+
+        if (
+          !calculatedDate ||
+          calculatedDateString ===
+            "Unable to reach goal with current savings rate"
+        ) {
+          return {
+            isValid: true,
+            message: "⚠️ Cannot reach goal with current savings",
+            meetsTarget: false,
+          };
+        }
+
+        if (calculatedDateString === "Goal already achieved!") {
+          return {
+            isValid: true,
+            message: "✓ Goal already achieved!",
+            meetsTarget: true,
+          };
+        }
+
+        // Compare dates
+        if (calculatedDate <= userTargetDate) {
+          const daysDifference = Math.ceil(
+            (userTargetDate - calculatedDate) / (1000 * 60 * 60 * 24)
+          );
+          return {
+            isValid: true,
+            message: `✓ On track! You'll meet your target ${daysDifference} day${
+              daysDifference !== 1 ? "s" : ""
+            } early`,
+            meetsTarget: true,
+          };
+        } else {
+          const daysDifference = Math.ceil(
+            (calculatedDate - userTargetDate) / (1000 * 60 * 60 * 24)
+          );
+          return {
+            isValid: true,
+            message: `✗ ${daysDifference} day${
+              daysDifference !== 1 ? "s" : ""
+            } behind target - increase weekly savings`,
+            meetsTarget: false,
+          };
+        }
+      }
+
+      function prepareExpenseData() {
+        const weeklyExpenses = expenses
+          .map((exp) => ({
+            name: exp.name,
+            weeklyAmount: convertToWeekly(exp.amount, exp.frequency),
+          }))
+          .sort((a, b) => b.weeklyAmount - a.weeklyAmount);
+
+        const colors = [
+          "#ef4444",
+          "#f97316",
+          "#f59e0b",
+          "#eab308",
+          "#84cc16",
+          "#22c55e",
+          "#10b981",
+          "#14b8a6",
+          "#06b6d4",
+          "#0ea5e9",
+          "#3b82f6",
+          "#6366f1",
+        ];
+
+        return {
+          labels: weeklyExpenses.map((exp) => exp.name),
+          amounts: weeklyExpenses.map((exp) => exp.weeklyAmount),
+          colors: colors.slice(0, weeklyExpenses.length),
+        };
+      }
+
+      function createExpensesBarChart() {
+        const data = prepareExpenseData();
+        const ctx = document
+          .getElementById("expensesBarChart")
+          .getContext("2d");
+
+        new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: data.labels,
+            datasets: [
+              {
+                data: data.amounts,
+                backgroundColor: data.colors,
+                borderWidth: 0,
+                borderRadius: 6,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "rgba(15, 23, 42, 0.95)",
+                titleColor: "#3b82f6",
+                bodyColor: "#f1f5f9",
+                borderColor: "rgba(59, 130, 246, 0.3)",
+                borderWidth: 1,
+                titleFont: { size: 14, weight: "600", family: "Inter" },
+                bodyFont: { size: 13, family: "Inter" },
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                  label: function (context) {
+                    return "$" + context.parsed.x.toFixed(2) + " per week";
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: {
+                  color: "rgba(148, 163, 184, 0.05)",
+                },
+                ticks: {
+                  color: "#94a3b8",
+                  font: { size: 12, family: "Inter" },
+                  callback: function (value) {
+                    return "$" + value;
+                  },
+                },
+              },
+              y: {
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  color: "#cbd5e1",
+                  font: { size: 12, family: "Inter" },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function createExpensesPieChart() {
+        const data = prepareExpenseData();
+        const ctx = document
+          .getElementById("expensesPieChart")
+          .getContext("2d");
+
+        new Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: data.labels,
+            datasets: [
+              {
+                data: data.amounts,
+                backgroundColor: data.colors,
+                borderWidth: 3,
+                borderColor: "rgba(15, 23, 42, 0.8)",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "right",
+                labels: {
+                  color: "#cbd5e1",
+                  font: { size: 12, family: "Inter" },
+                  padding: 12,
+                },
+              },
+              tooltip: {
+                backgroundColor: "rgba(15, 23, 42, 0.95)",
+                titleColor: "#3b82f6",
+                bodyColor: "#f1f5f9",
+                borderColor: "rgba(59, 130, 246, 0.3)",
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                  label: function (context) {
+                    const label = context.label || "";
+                    const value = context.parsed || 0;
+                    return label + ": $" + value.toFixed(2) + " per week";
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function createIncomeChart() {
+        const weeklyIncome = calculateTotalWeeklyIncome();
+        const weeklySavings = calculateWeeklySavings();
+
+        const ctx = document.getElementById("incomeChart").getContext("2d");
+
+        new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Weekly Income", "Weekly Savings"],
+            datasets: [
+              {
+                data: [weeklyIncome, weeklySavings],
+                backgroundColor: ["#ef4444", "#6366f1"],
+                borderWidth: 0,
+                borderRadius: 8,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "rgba(15, 23, 42, 0.95)",
+                titleColor: "#3b82f6",
+                bodyColor: "#f1f5f9",
+                borderColor: "rgba(59, 130, 246, 0.3)",
+                borderWidth: 1,
+                padding: 12,
+                cornerRadius: 8,
+                callbacks: {
+                  label: function (context) {
+                    return "$" + context.parsed.y.toFixed(2);
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: "rgba(148, 163, 184, 0.05)",
+                },
+                ticks: {
+                  color: "#94a3b8",
+                  font: { size: 12, family: "Inter" },
+                  callback: function (value) {
+                    return "$" + value;
+                  },
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
+                },
+                ticks: {
+                  color: "#cbd5e1",
+                  font: { size: 12, family: "Inter" },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      let currentGoalIndex = 0;
+
+      function populateGoalSelector() {
+        const selector = document.getElementById("goalSelector");
+        selector.innerHTML = "";
+
+        // Safety check
+        if (!goals || goals.length === 0) {
+          const option = document.createElement("option");
+          option.value = 0;
+          option.textContent = "No goals set";
+          selector.appendChild(option);
+          return;
+        }
+
+        goals.forEach((goal, index) => {
+          const option = document.createElement("option");
+          option.value = index;
+          option.textContent = goal.name;
+          selector.appendChild(option);
+        });
+
+        // Set the selector to the current goal index
+        selector.value = currentGoalIndex;
+      }
+
+      function updateGoalDisplay() {
+        // Safety check - ensure we have goals
+        if (!goals || goals.length === 0) {
+          console.error("No goals available");
+          return;
+        }
+
+        // Ensure currentGoalIndex is valid
+        if (currentGoalIndex >= goals.length) {
+          currentGoalIndex = 0;
+        }
+
+        const goal = goals[currentGoalIndex];
+        const slider = document.getElementById("savingsSlider");
+        const maxSavings = calculateWeeklySavings();
+
+        // Update slider max
+        slider.max = maxSavings > 0 ? maxSavings : 0;
+
+        // Set slider value to max savings (user can adjust down)
+        slider.value = maxSavings > 0 ? maxSavings : 0;
+
+        const weeklySavings = parseFloat(slider.value);
+
+        // Update progress bar
+        const progressPercentage = Math.min(
+          (goal.current / goal.target) * 100,
+          100
+        );
+        document.getElementById("progressBar").style.width =
+          progressPercentage + "%";
+        document.getElementById("progressText").textContent =
+          "$" + Math.round(goal.current).toLocaleString();
+        document.getElementById("progressMax").textContent =
+          "$" + Math.round(goal.target).toLocaleString();
+
+        // Update slider display text
+        document.getElementById("sliderValue").textContent =
+          "$" + Math.round(weeklySavings).toLocaleString() + " per week";
+
+        // Calculate and display goal date
+        const goalDate = calculateGoalDate(
+          goal.current,
+          goal.target,
+          weeklySavings
+        );
+        document.getElementById("goalDate").textContent = goalDate;
+
+        // Display and compare user target date
+        const userTargetDateElement = document.getElementById("userTargetDate");
+        const dateComparisonMessageElement = document.getElementById(
+          "dateComparisonMessage"
+        );
+
+        if (goal.targetDate && goal.targetDate !== "") {
+          userTargetDateElement.textContent = goal.targetDate;
+
+          // Compare dates
+          const comparison = compareTargetDates(goalDate, goal.targetDate);
+
+          if (comparison.isValid) {
+            if (comparison.meetsTarget) {
+              userTargetDateElement.className = "target-date-success";
+              dateComparisonMessageElement.className =
+                "comparison-message-success";
+            } else {
+              userTargetDateElement.className = "target-date-warning";
+              dateComparisonMessageElement.className =
+                "comparison-message-warning";
+            }
+            dateComparisonMessageElement.textContent = comparison.message;
+          } else {
+            userTargetDateElement.style.color = "#94a3b8";
+            dateComparisonMessageElement.textContent = "";
+          }
+        } else {
+          userTargetDateElement.textContent = "Not set";
+          userTargetDateElement.style.color = "#94a3b8";
+          dateComparisonMessageElement.textContent = "";
+        }
+      }
+
+      // Sidebar navigation
+      // Target date editing functionality
+      let isEditingDate = false;
+      let originalDateValue = "";
+
+      function enterEditMode() {
+        if (isEditingDate) return;
+
+        isEditingDate = true;
+        const goal = goals[currentGoalIndex];
+        originalDateValue = goal.targetDate || "";
+
+        // Hide display elements
+        document.getElementById("userTargetDate").style.display = "none";
+        document.getElementById("editTargetDateBtn").style.display = "none";
+
+        // Show input and action buttons
+        const dateInput = document.getElementById("userTargetDateInput");
+        dateInput.style.display = "inline-block";
+        dateInput.value = dateToInputFormat(goal.targetDate);
+        dateInput.focus();
+
+        document.getElementById("saveTargetDateBtn").style.display =
+          "inline-block";
+        document.getElementById("cancelTargetDateBtn").style.display =
+          "inline-block";
+      }
+
+      function exitEditMode(save = false) {
+        if (!isEditingDate) return;
+
+        if (save) {
+          const dateInput = document.getElementById("userTargetDateInput");
+          const newDateValue = inputFormatToDateString(dateInput.value);
+
+          // Update the goal data
+          goals[currentGoalIndex].targetDate = newDateValue;
+
+          // Save to localStorage AND Firebase
+          localStorage.setItem("financeGoals", JSON.stringify(goals));
+          if (currentUserId) {
+            saveUserData(currentUserId, "goals");
+          }
+
+          // Update display
+          updateGoalDisplay();
+        }
+
+        isEditingDate = false;
+
+        // Show display elements
+        document.getElementById("userTargetDate").style.display = "inline";
+        document.getElementById("editTargetDateBtn").style.display =
+          "inline-block";
+
+        // Hide input and action buttons
+        document.getElementById("userTargetDateInput").style.display = "none";
+        document.getElementById("saveTargetDateBtn").style.display = "none";
+        document.getElementById("cancelTargetDateBtn").style.display = "none";
+      }
+
+      // Edit button click
+      document
+        .getElementById("editTargetDateBtn")
+        .addEventListener("click", function () {
+          enterEditMode();
+        });
+
+      // Click on date text to edit
+      document
+        .getElementById("userTargetDate")
+        .addEventListener("click", function () {
+          enterEditMode();
+        });
+
+      // Save button click
+      document
+        .getElementById("saveTargetDateBtn")
+        .addEventListener("click", function () {
+          exitEditMode(true);
+        });
+
+      // Cancel button click
+      document
+        .getElementById("cancelTargetDateBtn")
+        .addEventListener("click", function () {
+          exitEditMode(false);
+        });
+
+      // Enter key to save, Escape to cancel
+      document
+        .getElementById("userTargetDateInput")
+        .addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            exitEditMode(true);
+          } else if (e.key === "Escape") {
+            exitEditMode(false);
+          }
+        });
+
+      document.querySelectorAll(".sidebar-item").forEach((item) => {
+        item.addEventListener("click", function () {
+          const page = this.dataset.page;
+          if (page === "dashboard") {
+            window.location.href = "Dashboard.html";
+          } else if (page === "expenses") {
+            window.location.href = "inputs.expenses.html";
+          } else if (page === "goals") {
+            window.location.href = "inputs.goals.html";
+          } else if (page === "income") {
+            window.location.href = "inputs.income.html";
+          }
+        });
+      });
+
+      document.addEventListener("DOMContentLoaded", async function () {
+        // Check if user is already authenticated
+        const userId = await checkAuthState();
+
+        if (userId) {
+          // User is logged in, load dashboard
+          await initializeDashboard();
+        } else {
+          // User not logged in, show auth modal
+          showAuthModal();
+        }
+      });
+    </script>
+  </body>
+</html>

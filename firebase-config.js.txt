@@ -1,0 +1,28 @@
+// firebase-config.js
+const firebaseConfig = {
+  apiKey: "AIzaSyCFLqXKsolAZEjnoHrmBAZhv-NKeLcW2hY",
+  authDomain: "financial-dashboard1.firebaseapp.com",
+  projectId: "financial-dashboard1",
+  storageBucket: "financial-dashboard1.firebasestorage.app",
+  messagingSenderId: "712705226601",
+  appId: "1:712705226601:web:9d4da5c7f37e024f262ff8",
+};
+
+// Initialize Firebase
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+
+// Security check - prevent local file access
+if (window.location.protocol === "file:") {
+  document.body.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: #0f172a; color: #fff; font-family: Inter, sans-serif; text-align: center; padding: 40px;">
+      <div>
+        <h1 style="font-size: 32px; margin-bottom: 20px;">⚠️ Access Restricted</h1>
+        <p style="font-size: 18px; color: #94a3b8;">This application must be accessed through the official link.</p>
+        <p style="font-size: 14px; color: #64748b; margin-top: 20px;">Contact the administrator for access.</p>
+      </div>
+    </div>
+  `;
+  throw new Error("Local file access not permitted");
+}
